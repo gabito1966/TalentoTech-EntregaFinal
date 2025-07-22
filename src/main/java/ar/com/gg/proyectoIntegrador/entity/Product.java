@@ -5,8 +5,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Min;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,7 +36,7 @@ public class Product {
     @Min(value = 0, message = "El stock no puede ser negativo.")
     private int stock;
 
-    // Constructor principal sin validaciones explícitas
+    // Constructor principal
     public Product(String image, String name, String description, double price, int stock) {
         this.image = image;
         this.name = name;
@@ -47,17 +48,7 @@ public class Product {
     // Constructor vacío
     public Product() {}
 
-    // Constructor con id
-    public Product(long id, String image, String name, String description, double price, int stock) {
-        this.id = id;
-        this.image = image;
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.stock = stock;
-    }
-
-    // Método para buscar productos por nombre
+    // Método para buscar productos por nombre (mejor hacerlo a nivel de servicio/repo)
     public boolean contieneNombre(String busqueda){
         String nombreMinuscula = this.name.toLowerCase();
         return nombreMinuscula.contains(busqueda.toLowerCase());
