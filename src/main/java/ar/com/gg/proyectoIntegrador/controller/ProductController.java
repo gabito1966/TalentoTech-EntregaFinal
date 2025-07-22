@@ -12,43 +12,51 @@ import java.util.List;
 @RestController
 @RequestMapping("/products")
 public class ProductController {
-    private ProductService service;
 
-    public ProductController(ProductService service) {
-        this.service = service;
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
     }
 
-    // Crear un nuevo producto
-    @PostMapping("/")
-    public ResponseEntity<ProductResponseDTO> createProduct(
-            @RequestBody ProductRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.service.createProduct(requestDTO));
-    }
-
-    // Obtener listado de productos
-    public List<ProductResponseDTO> getProducts() {
-        return this.service.getProducts();
+    // Obtener todos los productos
+    @GetMapping
+    public ResponseEntity<List<ProductResponseDTO>> getProducts() {
+        List<ProductResponseDTO> products = productService.getProducts();
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(products); // 204
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(products); // 200
     }
 
     // Buscar productos por nombre
     @GetMapping("/search")
-    public List<ProductResponseDTO> searchProductsByName(@RequestParam String queryName) {
-        return this.service.searchProductByName(queryName);
+    public ResponseEntity<List<ProductResponseDTO>> searchProductByName(@RequestParam String name) {
+        List<ProductResponseDTO> products = productService.searchProductByName(name);
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(products); // 404
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(products); // 200
     }
 
-    // Obtener producto por ID
-    @GetMapping("/{id}")
-    public ProductResponseDTO searchProductsById(@PathVariable Long id) {
-        return this.service.searchProductById(id);
+    // Crear un nuevo producto
+    @PostMapping
+    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody ProductRequestDTO productRequestDTO) {
+        ProductResponseDTO createdProduct = productService.createProduct(productRequestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct); // 201
     }
 
-    public ProductResponseDTO updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO requestDTO) {
-        return this.service.updateProduct(id, requestDTO);
+    // Actualizar un producto existente
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO productRequestDTO) {
+        ProductResponseDTO updatedProduct = productService.updateProduct(id, productRequestDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(updatedProduct); // 200
     }
 
-    // Eliminar producto
+    // Eliminar un producto
     @DeleteMapping("/{id}")
-    public ProductResponseDTO deleteProduct(@PathVariable Long id) {
-        return this.service.deleteProduct(id);
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204
     }
 }
