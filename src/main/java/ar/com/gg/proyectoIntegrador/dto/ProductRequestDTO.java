@@ -3,10 +3,15 @@ package ar.com.gg.proyectoIntegrador.dto;
 import lombok.Getter;
 import lombok.Setter;
 import jakarta.validation.constraints.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
 @Setter
 public class ProductRequestDTO {
+
+    // Atributo para la ruta de la imagen
+    @Size(max = 255, message = "La ruta de la imagen no puede tener más de 255 caracteres.")
+    private MultipartFile image;
 
     // Atributo para el nombre del producto
     @NotBlank(message = "El nombre no puede estar vacío.")
@@ -16,10 +21,6 @@ public class ProductRequestDTO {
     // Atributo para la descripción del producto
     @Size(max = 500, message = "La descripción no puede tener más de 500 caracteres.")
     private String description;
-
-    // Atributo para la ruta de la imagen
-    @Size(max = 255, message = "La ruta de la imagen no puede tener más de 255 caracteres.")
-    private String image;
 
     // Atributo para el precio del producto
     @NotNull(message = "El precio no puede ser nulo.")

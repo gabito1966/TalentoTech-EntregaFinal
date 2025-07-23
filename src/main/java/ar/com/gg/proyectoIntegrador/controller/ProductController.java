@@ -6,11 +6,13 @@ import ar.com.gg.proyectoIntegrador.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/products")
+@CrossOrigin(origins = "${frontend.url}")
 public class ProductController {
 
     private final ProductService productService;
@@ -48,9 +50,25 @@ public class ProductController {
 
     // Actualizar un producto existente
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> updateProduct(
+            @PathVariable Long id,
+            @RequestParam(required = false) MultipartFile image,
+            @RequestParam String name,
+            @RequestParam String description,
+            @RequestParam Double price,
+            @RequestParam Integer stock) {
+
+
+        ProductRequestDTO productRequestDTO = new ProductRequestDTO();
+        productRequestDTO.setImage(image);
+        productRequestDTO.setName(name);
+        productRequestDTO.setDescription(description);
+        productRequestDTO.setPrice(price);
+        productRequestDTO.setStock(stock);
+
         ProductResponseDTO updatedProduct = productService.updateProduct(id, productRequestDTO);
-        return ResponseEntity.status(HttpStatus.OK).body(updatedProduct); // 200
+
+        return ResponseEntity.status(HttpStatus.OK).body(updatedProduct);
     }
 
     // Eliminar un producto
