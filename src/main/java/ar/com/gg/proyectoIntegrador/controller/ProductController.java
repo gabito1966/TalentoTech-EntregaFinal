@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/products")
-@CrossOrigin(origins = "${frontend.url}")
+@CrossOrigin(origins = "http://127.0.0.1:5500")
 public class ProductController {
 
     private final ProductService productService;
@@ -41,9 +41,24 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(products); // 200
     }
 
-    // Crear un nuevo producto
+    // Crear un nuevo producto con imagen y parámetros
     @PostMapping
-    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> createProduct(
+            @RequestParam MultipartFile image,  // Imagen del producto
+            @RequestParam String name,          // Nombre del producto
+            @RequestParam String description,   // Descripción
+            @RequestParam Double price,         // Precio
+            @RequestParam Integer stock) {      // Stock
+
+        // Crear el DTO para el producto con los datos recibidos
+        ProductRequestDTO productRequestDTO = new ProductRequestDTO();
+        productRequestDTO.setImage(image); // Setear la imagen
+        productRequestDTO.setName(name);
+        productRequestDTO.setDescription(description);
+        productRequestDTO.setPrice(price);
+        productRequestDTO.setStock(stock);
+
+        // Llamar al servicio para crear el producto
         ProductResponseDTO createdProduct = productService.createProduct(productRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct); // 201
     }
@@ -58,18 +73,17 @@ public class ProductController {
             @RequestParam Double price,
             @RequestParam Integer stock) {
 
-
         ProductRequestDTO productRequestDTO = new ProductRequestDTO();
-        productRequestDTO.setImage(image);
+        productRequestDTO.setImage(image); // puede ser null
         productRequestDTO.setName(name);
         productRequestDTO.setDescription(description);
         productRequestDTO.setPrice(price);
         productRequestDTO.setStock(stock);
 
         ProductResponseDTO updatedProduct = productService.updateProduct(id, productRequestDTO);
-
         return ResponseEntity.status(HttpStatus.OK).body(updatedProduct);
     }
+
 
     // Eliminar un producto
     @DeleteMapping("/{id}")

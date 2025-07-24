@@ -8,7 +8,10 @@ import ar.com.gg.proyectoIntegrador.repository.ProductRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,6 +20,7 @@ public class ProductService {
 
     private final ProductRepository repository;
     private final ModelMapper modelMapper;
+    private final Path imageUploadPath = Paths.get("uploads/images/");
 
     @Autowired
     public ProductService(ProductRepository repository, ModelMapper modelMapper) {
@@ -25,69 +29,110 @@ public class ProductService {
     }
 
     // Crear un nuevo producto
-    public ProductResponseDTO createProduct(ProductRequestDTO productRequestDTO) {
-        Product product = modelMapper.map(productRequestDTO, Product.class);
-        this.repository.save(product);
+    public ProductResponseDTO createProduct(ProductRequestDTO dto) {
+        Product product = modelMapper.map(dto, Product.class);
+
+        MultipartFile image = dto.getImage();
+        if (image != null && !image.isEmpty()) {
+            try {
+                if (!Files.exists(imageUploadPath)) {
+                    Files.createDirectories(imageUploadPath);
+                }
+
+                String imageName = System.currentTimeMillis() + "_" + image.getOriginalFilename();
+                Path imagePath = imageUploadPath.resolve(imageName);
+                Files.copy(image.getInputStream(), imagePath);
+
+                product.setImage(imageName);
+            } catch (IOException e) {
+                throw new RuntimeException("Error al guardar la imagen", e);
+            }
+        }
+
+        repository.save(product);
         return modelMapper.map(product, ProductResponseDTO.class);
     }
 
-    // Obtener todos los productos (sin paginación)
-    /*public List<ProductResponseDTO> getProducts() {
-        return this.repository.findAll()
-                .stream()
-                .map(product -> modelMapper.map(product, ProductResponseDTO.class))
-                .collect(Collectors.toList());
-    }*/
-
+    // Obtener todos los productos
     public List<ProductResponseDTO> getProducts() {
-        List<Product> products = this.repository.findAll();
-        System.out.println("Productos recuperados: " + products.size());  // Agrega este log
-
-        return products.stream()
-                .map(product -> modelMapper.map(product, ProductResponseDTO.class))
+        return repository.findAll()
+                .stream()
+                .map(this::mapperToDTO)
                 .collect(Collectors.toList());
     }
 
+    // Buscar productos por nombre
+    public List<ProductResponseDTO> searchProductByName(String queryName) {
+        List<Product> found = repository.findByNameContainingIgnoreCase(queryName);
+        if (found.isEmpty()) {
+            throw new ProductNotFoundException("No se encontraron productos con el nombre: " + queryName);
+        }
+        return found.stream().map(this::mapperToDTO).collect(Collectors.toList());
+    }
 
+    // Buscar por ID
     public ProductResponseDTO searchProductById(Long id) {
-        return this.repository.findById(id)
+        return repository.findById(id)
                 .map(this::mapperToDTO)
                 .orElseThrow(() -> new ProductNotFoundException(id.toString()));
     }
 
-    // Buscar productos por nombre (sin paginación)
-    public List<ProductResponseDTO> searchProductByName(String queryName) {
-        List<Product> foundProducts = this.repository.findByNameContainingIgnoreCase(queryName);
-
-        if (foundProducts.isEmpty()) {
-            throw new ProductNotFoundException("No se encontraron productos con el nombre: " + queryName);
-        }
-
-        return foundProducts.stream()
-                .map(this::mapperToDTO)
-                .collect(Collectors.toList());
-    }
-
-    // Actualizar un producto existente
-    public ProductResponseDTO updateProduct(Long id, ProductRequestDTO productRequestDTO) {
-        Product product = this.repository.findById(id)
+    // Actualizar producto
+    public ProductResponseDTO updateProduct(Long id, ProductRequestDTO dto) {
+        Product existing = repository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Producto con ID " + id + " no encontrado"));
 
-        modelMapper.map(productRequestDTO, product);
-        this.repository.save(product);
-        return modelMapper.map(product, ProductResponseDTO.class);
+        MultipartFile newImage = dto.getImage();
+        String imageName = existing.getImage(); // mantener la actual
+
+        if (newImage != null && !newImage.isEmpty()) {
+            try {
+                if (!Files.exists(imageUploadPath)) {
+                    Files.createDirectories(imageUploadPath);
+                }
+
+                // Eliminar imagen anterior
+                if (imageName != null) {
+                    Files.deleteIfExists(imageUploadPath.resolve(imageName));
+                }
+
+                // Guardar nueva imagen
+                imageName = System.currentTimeMillis() + "_" + newImage.getOriginalFilename();
+                Files.copy(newImage.getInputStream(), imageUploadPath.resolve(imageName));
+
+            } catch (IOException e) {
+                throw new RuntimeException("Error al actualizar la imagen", e);
+            }
+        }
+
+        existing.setName(dto.getName());
+        existing.setDescription(dto.getDescription());
+        existing.setPrice(dto.getPrice());
+        existing.setStock(dto.getStock());
+        existing.setImage(imageName); // actual o nueva
+
+        repository.save(existing);
+        return modelMapper.map(existing, ProductResponseDTO.class);
     }
 
-    // Eliminar un producto
+    // Eliminar producto y su imagen
     public void deleteProduct(Long id) {
-        if (!this.repository.existsById(id)) {
-            throw new ProductNotFoundException("Producto con ID " + id + " no encontrado");
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Producto con ID " + id + " no encontrado"));
+
+        // Eliminar imagen del disco
+        if (product.getImage() != null) {
+            try {
+                Files.deleteIfExists(imageUploadPath.resolve(product.getImage()));
+            } catch (IOException e) {
+                System.err.println("No se pudo eliminar la imagen: " + product.getImage());
+            }
         }
-        this.repository.deleteById(id);
+
+        repository.deleteById(id);
     }
 
     private ProductResponseDTO mapperToDTO(Product product) {
         return modelMapper.map(product, ProductResponseDTO.class);
     }
-
 }
